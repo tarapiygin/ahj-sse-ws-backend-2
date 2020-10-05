@@ -28,39 +28,52 @@ router.get('/users', async (ctx, next) => {
 });
 
 router.post('/users', async (ctx, next) => {
-  usersList.push({...ctx.request.body, id: uuid.v4()});
+  usersList.push({ ...ctx.request.body, id: uuid.v4() });
   ctx.response.status = 204
 });
 
 router.delete('/users/:name', async (ctx, next) => {
+  console.log(ctx.params.name);
   const index = usersList.findIndex(({ name }) => name === ctx.params.name);
   if (index !== -1) {
     usersList.splice(index, 1);
   };
+  console.log(usersList);
   ctx.response.status = 204
 });
 
 wsServer.on('connection', (ws, req) => {
   ws.on('message', msg => {
-    [...wsServer.clients]
-    .filter(o => {
-      return o.readyState === WS.OPEN;
-    })
-    .forEach(o => o.send(msg));
+    console.log(msg)
+    const data = JSON.parse(msg);
+    console.log(data)
+    if (data.method === 'DELETE') {
+      const index = usersList.findIndex(({ name }) => name === data.name);
+      if (index !== -1) {
+        usersList.splice(index, 1);
+      };
+      console.log(usersList);
+    } else {
+      [...wsServer.clients]
+        .filter(o => {
+          return o.readyState === WS.OPEN;
+        })
+        .forEach(o => o.send(msg));
+    }
   });
   ws.on('close', msg => {
     [...wsServer.clients]
-    .filter(o => {
-      return o.readyState === WS.OPEN;
-    })
-    .forEach(o => o.send(JSON.stringify({type: 'delete'})));
+      .filter(o => {
+        return o.readyState === WS.OPEN;
+      })
+      .forEach(o => o.send(JSON.stringify({ type: 'delete' })));
     ws.close();
   });
   [...wsServer.clients]
     .filter(o => {
       return o.readyState === WS.OPEN;
     })
-    .forEach(o => o.send(JSON.stringify({type: 'add'})));
+    .forEach(o => o.send(JSON.stringify({ type: 'add' })));
 });
 
 
